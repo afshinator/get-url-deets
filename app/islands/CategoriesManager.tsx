@@ -11,9 +11,8 @@ interface Props {
 
 export default function CategoriesManager({ initialCategories }: Props) {
   const [categories, setCategories] = useState<CategoryData[]>(initialCategories)
-  const [editing, setEditing] = useState<string | null>(null)
   const [newCategory, setNewCategory] = useState('')
-  const [newTag, setNewTag] = useState('')
+  const [tagInputs, setTagInputs] = useState<Record<string, string>>({})
   const [saveError, setSaveError] = useState('')
 
   const save = async (cats: CategoryData[]) => {
@@ -44,11 +43,10 @@ export default function CategoriesManager({ initialCategories }: Props) {
 
   const deleteCategory = (name: string) => {
     save(categories.filter(c => c.name !== name))
-    if (editing === name) setEditing(null)
   }
 
   const addTag = (catName: string) => {
-    const t = newTag.trim()
+    const t = (tagInputs[catName] ?? '').trim()
     if (!t) return
     const updated = categories.map(c =>
       c.name === catName && !c.tags.includes(t)
@@ -56,7 +54,11 @@ export default function CategoriesManager({ initialCategories }: Props) {
         : c
     )
     save(updated)
-    setNewTag('')
+    setTagInputs(prev => {
+      const next = { ...prev }
+      delete next[catName]
+      return next
+    })
   }
 
   const removeTag = (catName: string, tag: string) => {
@@ -73,7 +75,7 @@ export default function CategoriesManager({ initialCategories }: Props) {
       <div class="card">
         <div class="mb-16">
           <h3 style="margin: 0 0 4px; font-size: 16px;">Categories & Tags</h3>
-          <p class="text-muted" style="margin: 0;">Each category has its own set of tags. The AI picks from these when summarizing.</p>
+          <p class="text-muted" style="margin: 0;">Each category has its own set of tags. The AI picks up to 3 from these when summarizing.</p>
         </div>
 
         {saveError && (
@@ -82,7 +84,7 @@ export default function CategoriesManager({ initialCategories }: Props) {
           </div>
         )}
 
-        <div class="flex-between gap-8 mb-16" style="display: flex;">
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
           <input
             class="input"
             style="flex: 1;"
@@ -101,36 +103,34 @@ export default function CategoriesManager({ initialCategories }: Props) {
                 <span style="font-weight: 600; font-size: 14px;">{cat.name}</span>
                 <span class="badge-count">{cat.tags.length} tags</span>
               </div>
-              <div class="gap-6" style="display: flex;">
-                <button class="btn btn-ghost btn-sm" onClick={() => setEditing(editing === cat.name ? null : cat.name)}>
-                  Edit Tags
-                </button>
-                <button class="btn btn-danger btn-sm" onClick={() => deleteCategory(cat.name)}>
-                  Delete
-                </button>
-              </div>
+              <button class="btn btn-danger btn-sm" onClick={() => deleteCategory(cat.name)}>
+                Delete
+              </button>
             </div>
 
-            {editing === cat.name && (
-              <div style="padding: 12px 0 16px;">
-                <div class="flex-wrap gap-6 mb-8" style="display: flex;">
-                  {cat.tags.map(tag => (
-                    <span class="tag" key={tag}>
-                      {tag}
-                      <span class="tag-remove" onClick={() => removeTag(cat.name, tag)}>×</span>
-                    </span>
-                  ))}
-                  <input
-                    class="input"
-                    style="width: 120px; font-size: 12px; padding: 3px 8px;"
-                    placeholder="+ add tag..."
-                    value={editing === cat.name ? newTag : ''}
-                    onChange={(e: Event) => setNewTag((e.target as HTMLInputElement).value)}
-                    onKeyUp={(e: KeyboardEvent) => e.key === 'Enter' && addTag(cat.name)}
-                  />
-                </div>
+            <div style="padding: 4px 0 16px;">
+              <div class="flex-wrap gap-6 mb-8" style="display: flex;">
+                {cat.tags.map(tag => (
+                  <span class="tag" key={tag}>
+                    {tag}
+                    <span class="tag-remove" onClick={() => removeTag(cat.name, tag)}>×</span>
+                  </span>
+                ))}
+                <input
+                  class="input"
+                  style="width: 140px; font-size: 12px; padding: 3px 8px;"
+                  placeholder={`+ add to ${cat.name}`}
+                  value={tagInputs[cat.name] ?? ''}
+                  onChange={(e: Event) =>
+                    setTagInputs(prev => ({
+                      ...prev,
+                      [cat.name]: (e.target as HTMLInputElement).value,
+                    }))
+                  }
+                  onKeyUp={(e: KeyboardEvent) => e.key === 'Enter' && addTag(cat.name)}
+                />
               </div>
-            )}
+            </div>
           </div>
         ))}
       </div>

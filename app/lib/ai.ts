@@ -120,7 +120,9 @@ Category: ${category}
 Available tags for this category: ${tagList}
 
 Given the following page content about a tool, respond in JSON format:
-{"summary": "2-3 sentences: what type of tool it is, who uses it, what specific problem it solves. Be concrete — mention technologies, workflows, or use cases visible on the page.", "tags": ["tag1", "tag2"]}
+{"summary": "2-3 sentences: what type of tool it is, who uses it, what specific problem it solves. Be concrete — mention technologies, workflows, or use cases visible on the page.", "tags": ["most_specific", "narrow", "general"]}
+
+Assign up to 3 tags from the list. Order them from most specific/narrow (describing what the tool literally is or does) to most general/broad (describing what category or domain it falls into). If fewer than 3 are applicable, use fewer.
 
 Page content:
 ${pageText.slice(0, 8000)}`
@@ -137,7 +139,7 @@ ${pageText.slice(0, 8000)}`
   }
   const text = typeof raw?.response === 'string' ? raw.response : ''
   const result = parseAiResult(text)
-  result.tags = filterTagsToPool(result.tags, availableTags)
+  result.tags = filterTagsToPool(result.tags, availableTags).slice(0, 3)
   return result
 }
 

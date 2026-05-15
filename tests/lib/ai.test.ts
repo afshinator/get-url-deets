@@ -163,9 +163,14 @@ describe('filterTagsToPool', () => {
     expect(filterTagsToPool(['ai'], [])).toEqual([])
   })
 
-  it('keeps all tags when all match', () => {
-    const result = filterTagsToPool(['ai', 'testing'], ['ai', 'testing', 'cli'])
-    expect(result).toEqual(['ai', 'testing'])
+  it('caps to 3 tags when sliced after filtering', () => {
+    const tags = ['ai', 'testing', 'cli', 'open-source', 'devtools']
+    const pool = ['ai', 'testing', 'cli', 'open-source', 'devtools']
+    // filterTagsToPool itself passes all 5 through since all are in pool
+    // summarizeAndTag applies .slice(0, 3) after filtering
+    const filtered = filterTagsToPool(tags, pool)
+    expect(filtered.length).toBe(5) // filter passes all
+    expect(filtered.slice(0, 3)).toEqual(['ai', 'testing', 'cli']) // cap applied by caller
   })
 })
 
