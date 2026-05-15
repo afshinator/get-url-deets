@@ -6,6 +6,12 @@ export default createRoute(async (c) => {
   const kv: KVNamespace | undefined = (c.env as any)?.DEETS_KV
   const stackDescription = kv ? (await kv.get('stack-description') ?? '') : ''
 
+  let hasEntries = false
+  if (kv) {
+    const list = await kv.list({ prefix: 'entry:', limit: 1 })
+    hasEntries = list.keys.length > 0
+  }
+
   return c.render(
     <div>
       <nav class="nav">
@@ -19,7 +25,7 @@ export default createRoute(async (c) => {
         <ThemeToggle />
       </nav>
       <div class="container">
-        <StackSettings initialStack={stackDescription} />
+        <StackSettings initialStack={stackDescription} hasEntries={hasEntries} />
       </div>
     </div>
   ) as any

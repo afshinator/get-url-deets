@@ -1,13 +1,15 @@
 import type { UrlEntry } from './types'
+import { normalizeUrl } from './parser'
 
 export async function saveEntry(kv: KVNamespace, entry: UrlEntry) {
-  await kv.put(`entry:${entry.url}`, JSON.stringify(entry))
+  const key = normalizeUrl(entry.url)
+  await kv.put(`entry:${key}`, JSON.stringify(entry))
 
   const indexKey = `by-category:${entry.category}`
   const indexJson = await kv.get(indexKey)
   const urls: string[] = indexJson ? JSON.parse(indexJson) : []
-  if (!urls.includes(entry.url)) {
-    urls.unshift(entry.url)
+  if (!urls.includes(key)) {
+    urls.unshift(key)
     if (urls.length > 200) urls.length = 200
     await kv.put(indexKey, JSON.stringify(urls))
   }

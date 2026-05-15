@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { summarizeAndTag, evaluateStackFit, fetchPageText, resolveStackFit } from '../../lib/ai'
 import { saveEntry } from '../../lib/kv'
+import { normalizeUrl } from '../../lib/parser'
 import type { UrlEntry } from '../../lib/types'
 
 type Env = {
@@ -17,7 +18,8 @@ app.post(async (c) => {
     category: string
     checkStackFit?: boolean
   }>()
-  const { url, name, category, checkStackFit } = body
+  const { url: rawUrl, name, category, checkStackFit } = body
+  const url = normalizeUrl(rawUrl)
 
   if (typeof url !== 'string' || !url) {
     return c.json({ error: 'URL is required' }, 400)

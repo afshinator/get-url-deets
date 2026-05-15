@@ -2,9 +2,10 @@ import { useState } from 'hono/jsx'
 
 interface Props {
   initialStack: string
+  hasEntries?: boolean
 }
 
-export default function StackSettings({ initialStack }: Props) {
+export default function StackSettings({ initialStack, hasEntries }: Props) {
   const [stack, setStack] = useState(initialStack)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -82,6 +83,7 @@ export default function StackSettings({ initialStack }: Props) {
         </div>
       </div>
 
+      {hasEntries && (
       <div class="card mt-16">
         <h3 style="margin: 0 0 4px; font-size: 16px; color: var(--text);">Data</h3>
         <p class="text-muted" style="margin: 0 0 12px;">
@@ -117,6 +119,7 @@ export default function StackSettings({ initialStack }: Props) {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
