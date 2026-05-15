@@ -13,7 +13,7 @@ export default createRoute(async (c) => {
     <div>
       <nav class="nav">
         <div>
-          <span class="nav-brand">Deets</span>
+          <span class="nav-brand">get-url-deets</span>
           <a href="/" class="nav-link active">Home</a>
           <a href="/categories" class="nav-link">Categories</a>
           <a href="/settings" class="nav-link">Settings</a>
