@@ -77,7 +77,7 @@ body {
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 8px 12px; font-size: 14px; font-family: inherit;
 }
-.textarea { width: 100%; min-height: 100px; border-style: dashed; resize: vertical; }
+.textarea { width: 100%; min-height: 200px; border-style: dashed; resize: vertical; }
 .textarea:focus, .input:focus, select:focus { outline: none; border-color: var(--accent); }
 
 .label-text { display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
@@ -93,6 +93,8 @@ body {
 .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 .btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn-cancel { background: var(--danger); color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-family: inherit; cursor: pointer; }
+.btn-cancel:hover { opacity: 0.85; }
 
 .tag {
   display: inline-flex; align-items: center; gap: 4px;
@@ -114,6 +116,7 @@ body {
 .badge-replace { background: #713f12; color: #fde68a; }
 .badge-enhance { background: #1e3a5f; color: #93c5fd; }
 .badge-nofit, .badge-no_fit { background: #374151; color: #9ca3af; }
+.badge-failed { background: #7f1d1d; color: #fca5a5; }
 
 .export-preview {
   background: var(--bg-input); border: 1px solid var(--border);
@@ -129,7 +132,7 @@ body {
 .processing-card { opacity: 0.7; }
 
 .stack-textarea {
-  width: 100%; min-height: 200px;
+  width: 100%; min-height: calc(100vh - 280px);
   background: var(--bg-input); color: var(--text);
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 12px; font-size: 14px; font-family: inherit; resize: vertical;

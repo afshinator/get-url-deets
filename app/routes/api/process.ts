@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { parseUrls } from '../../lib/parser'
 import { summarizeAndTag, evaluateStackFit, fetchPageText, resolveStackFit } from '../../lib/ai'
+import { saveEntry } from '../../lib/kv'
 import type { UrlEntry } from '../../lib/types'
 
 type Env = {
@@ -56,7 +57,9 @@ app.post(async (c) => {
         }
       }
 
-      results.push({ name: resolvedName, url, summary, category, tags, stackFit })
+      const entry: UrlEntry = { name: resolvedName, url, summary, category, tags, stackFit }
+      results.push(entry)
+      if (kv) saveEntry(kv, entry).catch(() => {})
     } catch (err) {
       results.push({
         name: name || url,

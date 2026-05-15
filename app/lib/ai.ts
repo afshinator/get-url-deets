@@ -84,9 +84,9 @@ export function parseStackFitResult(text: string): StackFitResult | null {
 }
 
 function diagnoseStackFitError(text: string): string {
-  if (!text) return 'AI returned an empty response. Try again.'
+  if (!text) return `AI returned an empty response (length ${text.length}). Try again.`
   const json = extractJson(text)
-  if (!json) return 'AI returned a response without JSON. The model may have misunderstood the prompt. Try again.'
+  if (!json) return `AI returned a response without JSON (${text.length} chars). The model may have misunderstood the prompt. Try again.`
   return 'AI returned JSON that could not be parsed. Try again.'
 }
 
@@ -96,9 +96,9 @@ export function resolveStackFit(
 ): NonNullable<Exclude<{ verdict: string; explanation: string }, undefined>> {
   if (sf) return { verdict: sf.verdict, explanation: sf.explanation }
   if (rawResponse !== undefined) {
-    return { verdict: 'NO_FIT', explanation: diagnoseStackFitError(rawResponse) }
+    return { verdict: 'FAILED', explanation: diagnoseStackFitError(rawResponse) }
   }
-  return { verdict: 'NO_FIT', explanation: 'Could not evaluate stack fit. Try again.' }
+  return { verdict: 'FAILED', explanation: 'Could not evaluate stack fit. Try again.' }
 }
 
 export async function summarizeAndTag(
@@ -115,14 +115,14 @@ Category: ${category}
 Available tags for this category: ${tagList}
 
 Given the following page content about a tool, respond in JSON format:
-{"summary": "2 sentences explaining what this tool does", "tags": ["tag1", "tag2"]}
+{"summary": "2-3 sentences: what type of tool it is, who uses it, what specific problem it solves. Be concrete — mention technologies, workflows, or use cases visible on the page.", "tags": ["tag1", "tag2"]}
 
 Page content:
 ${pageText.slice(0, 8000)}`
 
   const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: 512,
+    max_tokens: 1024,
   })
 
   const raw = response as any
@@ -154,11 +154,12 @@ Respond in JSON:
 
   const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: 256,
+    max_tokens: 512,
   })
 
   const raw = response as any
   const text = typeof raw?.response === 'string' ? raw.response : ''
+  if (!text) console.warn('evaluateStackFit: AI returned empty response')
   return { result: parseStackFitResult(text), rawResponse: text }
 }
 

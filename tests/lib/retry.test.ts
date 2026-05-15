@@ -14,27 +14,27 @@ function entry(overrides: Partial<UrlEntry> = {}): UrlEntry {
 }
 
 describe('isRetryableFailure', () => {
-  it('returns true for AI empty response', () => {
-    const e = entry({ stackFit: { verdict: 'NO_FIT', explanation: 'AI returned an empty response. Try again.' } })
+  it('returns true for FAILED verdict — empty response', () => {
+    const e = entry({ stackFit: { verdict: 'FAILED', explanation: 'AI returned an empty response (length 0). Try again.' } })
     expect(isRetryableFailure(e)).toBe(true)
   })
 
-  it('returns true for AI no-JSON response', () => {
-    const e = entry({ stackFit: { verdict: 'NO_FIT', explanation: 'AI returned a response without JSON. The model may have misunderstood the prompt. Try again.' } })
+  it('returns true for FAILED verdict — no-JSON response', () => {
+    const e = entry({ stackFit: { verdict: 'FAILED', explanation: 'AI returned a response without JSON (42 chars). The model may have misunderstood the prompt. Try again.' } })
     expect(isRetryableFailure(e)).toBe(true)
   })
 
-  it('returns true for AI unparseable JSON response', () => {
-    const e = entry({ stackFit: { verdict: 'NO_FIT', explanation: 'AI returned JSON that could not be parsed. Try again.' } })
+  it('returns true for FAILED verdict — unparseable JSON', () => {
+    const e = entry({ stackFit: { verdict: 'FAILED', explanation: 'AI returned JSON that could not be parsed. Try again.' } })
     expect(isRetryableFailure(e)).toBe(true)
   })
 
-  it('returns true for generic evaluation failure', () => {
-    const e = entry({ stackFit: { verdict: 'NO_FIT', explanation: 'Could not evaluate stack fit. Try again.' } })
+  it('returns true for FAILED verdict — generic fallback', () => {
+    const e = entry({ stackFit: { verdict: 'FAILED', explanation: 'Could not evaluate stack fit. Try again.' } })
     expect(isRetryableFailure(e)).toBe(true)
   })
 
-  it('returns false when no stack description was saved', () => {
+  it('returns false for NO_FIT verdict (no stack description — config issue)', () => {
     const e = entry({ stackFit: { verdict: 'NO_FIT', explanation: 'No stack description saved — add one in Settings.' } })
     expect(isRetryableFailure(e)).toBe(false)
   })

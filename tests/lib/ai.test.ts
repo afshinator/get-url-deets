@@ -152,24 +152,24 @@ describe('resolveStackFit', () => {
 
   it('diagnoses empty response', () => {
     const result = resolveStackFit(null, '')
-    expect(result.verdict).toBe('NO_FIT')
+    expect(result.verdict).toBe('FAILED')
     expect(result.explanation).toContain('empty response')
   })
 
   it('diagnoses no-JSON response', () => {
     const result = resolveStackFit(null, 'Here is some rambling text with no curly braces.')
-    expect(result.verdict).toBe('NO_FIT')
+    expect(result.verdict).toBe('FAILED')
     expect(result.explanation).toContain('without JSON')
   })
 
   it('diagnoses parse failure when JSON present but broken', () => {
     const result = resolveStackFit(null, '{"verdict": "ENHANCE", "explanation": "text with "unescaped" inner quotes"}')
-    expect(result.verdict).toBe('NO_FIT')
+    expect(result.verdict).toBe('FAILED')
     expect(result.explanation).toContain('could not be parsed')
   })
 
   it('falls back when no raw response provided', () => {
     const result = resolveStackFit(null)
-    expect(result).toEqual({ verdict: 'NO_FIT', explanation: 'Could not evaluate stack fit. Try again.' })
+    expect(result).toEqual({ verdict: 'FAILED', explanation: 'Could not evaluate stack fit. Try again.' })
   })
 })

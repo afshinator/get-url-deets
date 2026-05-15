@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'hono/jsx'
+import { useState, useCallback, useRef } from 'hono/jsx'
 import type { UrlEntry } from '../lib/types'
 import { parseUrls } from '../lib/parser'
 import { formatExport } from '../lib/export'
@@ -6,29 +6,31 @@ import { formatExport } from '../lib/export'
 export function isRetryableFailure(entry: UrlEntry): boolean {
   return (
     !!entry.stackFit &&
-    entry.stackFit.verdict === 'NO_FIT' &&
-    !entry.stackFit.explanation.includes('No stack description saved')
+    entry.stackFit.verdict === 'FAILED'
   )
 }
 
 interface Props {
   categories: string[]
+  initialData?: UrlEntry[]
 }
 
-export default function ResultCards({ categories }: Props) {
+export default function ResultCards({ categories, initialData }: Props) {
   const [text, setText] = useState('')
   const [category, setCategory] = useState(categories[0] ?? 'dev')
   const [checkStackFit, setCheckStackFit] = useState(false)
-  const [results, setResults] = useState<UrlEntry[]>([])
+  const [results, setResults] = useState<UrlEntry[]>(initialData ?? [])
   const [pendingUrls, setPendingUrls] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
   const [retrying, setRetrying] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
 
   const allDone = pendingUrls.size === 0 && results.length > 0
   const retryableCount = results.filter(isRetryableFailure).length
 
   const handleProcess = useCallback(async () => {
     if (!text.trim()) return
+    abortRef.current?.abort()
     setResults([])
     setError('')
 
@@ -38,18 +40,23 @@ export default function ResultCards({ categories }: Props) {
       return
     }
 
+    const controller = new AbortController()
+    abortRef.current = controller
     setPendingUrls(new Set(parsed.map(p => p.url)))
 
     for (const { name, url } of parsed) {
+      if (controller.signal.aborted) break
       try {
         const resp = await fetch('/api/process-one', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url, name, category, checkStackFit }),
+          signal: controller.signal,
         })
         const entry = await resp.json() as UrlEntry
         setResults(prev => [...prev, entry])
-      } catch {
+      } catch (err: any) {
+        if (err?.name === 'AbortError') break
         setResults(prev => [
           ...prev,
           {
@@ -69,6 +76,11 @@ export default function ResultCards({ categories }: Props) {
       }
     }
   }, [text, category, checkStackFit])
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort()
+    setPendingUrls(new Set())
+  }, [])
 
   const handleRetryFailed = useCallback(async () => {
     const failed = results.reduce<{ index: number; entry: UrlEntry }[]>((acc, entry, i) => {
@@ -164,6 +176,9 @@ export default function ResultCards({ categories }: Props) {
           <button class="btn" onClick={handleProcess} disabled={pendingUrls.size > 0 || !text.trim()}>
             {pendingUrls.size > 0 ? `Processing ${pendingUrls.size} remaining...` : 'Process URLs'}
           </button>
+          {pendingUrls.size > 0 && (
+            <button class="btn-cancel" onClick={handleCancel}>Cancel</button>
+          )}
           {allDone && retryableCount > 0 && (
             <button class="btn btn-ghost" onClick={handleRetryFailed} disabled={retrying}>
               {retrying ? `Retrying ${retryableCount} failed...` : `Retry ${retryableCount} failed evaluation${retryableCount !== 1 ? 's' : ''}`}

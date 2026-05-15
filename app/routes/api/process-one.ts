@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { summarizeAndTag, evaluateStackFit, fetchPageText, resolveStackFit } from '../../lib/ai'
+import { saveEntry } from '../../lib/kv'
 import type { UrlEntry } from '../../lib/types'
 
 type Env = {
@@ -60,6 +61,9 @@ app.post(async (c) => {
       tags,
       stackFit,
     }
+
+    // Persist to KV
+    if (kv) await saveEntry(kv, entry)
 
     return c.json(entry)
   } catch (err) {

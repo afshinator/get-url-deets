@@ -23,6 +23,7 @@ export default createRoute(async (c) => {
           <span class="nav-brand">get-url-deets</span>
           <a href="/" class="nav-link">Home</a>
           <a href="/categories" class="nav-link active">Categories</a>
+          <a href="/library" class="nav-link">Library</a>
           <a href="/settings" class="nav-link">Settings</a>
         </div>
         <ThemeToggle />
