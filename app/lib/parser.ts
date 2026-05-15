@@ -12,6 +12,18 @@ export function normalizeUrl(url: string): string {
   return u
 }
 
+const REPO_HOSTS = ['github.com', 'gitlab.com']
+
+export function inferTypeTag(url: string): 'github' | null {
+  try {
+    const host = new URL(url).hostname
+    if (REPO_HOSTS.some(h => host === h || host.endsWith('.' + h))) return 'github'
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function parseUrls(text: string): ParsedUrl[] {
   if (typeof text !== 'string') return []
   const lines = text.split('\n')

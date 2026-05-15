@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseUrls, normalizeUrl } from '../../app/lib/parser'
+import { parseUrls, normalizeUrl, inferTypeTag } from '../../app/lib/parser'
 
 describe('normalizeUrl', () => {
   it('strips trailing slash from path', () => {
@@ -38,6 +38,32 @@ describe('normalizeUrl', () => {
 
   it('normalizes URL with trailing slash AND ref param', () => {
     expect(normalizeUrl('https://onbeacon.ai/?ref=producthunt')).toBe('https://onbeacon.ai')
+  })
+})
+
+describe('inferTypeTag', () => {
+  it('returns github for github.com URLs', () => {
+    expect(inferTypeTag('https://github.com/user/repo')).toBe('github')
+  })
+
+  it('returns github for gitlab.com URLs', () => {
+    expect(inferTypeTag('https://gitlab.com/org/repo')).toBe('github')
+  })
+
+  it('returns github for github.com with trailing slash', () => {
+    expect(inferTypeTag('https://github.com/user/repo/')).toBe('github')
+  })
+
+  it('returns null for non-repo URLs', () => {
+    expect(inferTypeTag('https://example.com')).toBeNull()
+  })
+
+  it('returns null for web apps', () => {
+    expect(inferTypeTag('https://app.example.com/dashboard')).toBeNull()
+  })
+
+  it('returns null for documentation sites', () => {
+    expect(inferTypeTag('https://mui.com')).toBeNull()
   })
 })
 

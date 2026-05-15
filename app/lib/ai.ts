@@ -2,6 +2,8 @@ interface AiEnv {
   AI: Ai
 }
 
+import { inferTypeTag } from './parser'
+
 interface AiResult {
   summary: string
   tags: string[]
@@ -107,6 +109,16 @@ export function filterTagsToPool(tags: string[], pool: string[]): string[] {
   return tags.filter(t => pool.includes(t))
 }
 
+const TYPE_TAGS = ['github', 'web site', 'web app']
+
+export function enforceTypeTag(tags: string[], url: string): string[] {
+  const hasType = tags.some(t => TYPE_TAGS.includes(t))
+  if (hasType) return tags
+  const inferred = inferTypeTag(url)
+  if (inferred) return [...tags, inferred]
+  return tags
+}
+
 export async function summarizeAndTag(
   env: AiEnv,
   pageText: string,
@@ -123,7 +135,7 @@ Available tags for this category: ${tagList}
 Given the following page content about a tool, respond in JSON format:
 {"summary": "2-3 sentences: what type of tool it is, who uses it, what specific problem it solves. Be concrete — mention technologies, workflows, or use cases visible on the page.", "tags": ["most_specific", "narrow", "general"]}
 
-Assign up to 3 tags from the list. Order them from most specific/narrow (describing what the tool literally is or does) to most general/broad (describing what category or domain it falls into). If fewer than 3 are applicable, use fewer.
+Assign up to 4 tags from the list. Order them from most specific/narrow to most general/broad. One tag MUST be a type tag indicating whether the tool is a "github", "web site", or "web app". If fewer than 4 are applicable, use fewer.
 
 Page content:
 ${pageText.slice(0, 8000)}`
@@ -145,7 +157,7 @@ ${pageText.slice(0, 8000)}`
     return { summary: `Unexpected AI response: ${shape || '(empty)'}`, tags: [] }
   }
   const result = parseAiResult(text)
-  result.tags = filterTagsToPool(result.tags, availableTags).slice(0, 3)
+  result.tags = filterTagsToPool(result.tags, availableTags).slice(0, 4)
   return result
 }
 

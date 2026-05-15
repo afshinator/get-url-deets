@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseAiResult, parseStackFitResult, extractJson, resolveStackFit, filterTagsToPool } from '../../app/lib/ai'
+import { parseAiResult, parseStackFitResult, extractJson, resolveStackFit, filterTagsToPool, enforceTypeTag } from '../../app/lib/ai'
 
 describe('extractJson', () => {
   it('extracts JSON from plain text', () => {
@@ -163,14 +163,44 @@ describe('filterTagsToPool', () => {
     expect(filterTagsToPool(['ai'], [])).toEqual([])
   })
 
-  it('caps to 3 tags when sliced after filtering', () => {
+  it('caps to 4 tags when sliced after filtering', () => {
     const tags = ['ai', 'testing', 'cli', 'open-source', 'devtools']
     const pool = ['ai', 'testing', 'cli', 'open-source', 'devtools']
-    // filterTagsToPool itself passes all 5 through since all are in pool
-    // summarizeAndTag applies .slice(0, 3) after filtering
     const filtered = filterTagsToPool(tags, pool)
-    expect(filtered.length).toBe(5) // filter passes all
-    expect(filtered.slice(0, 3)).toEqual(['ai', 'testing', 'cli']) // cap applied by caller
+    expect(filtered.length).toBe(5)
+    expect(filtered.slice(0, 4)).toEqual(['ai', 'testing', 'cli', 'open-source'])
+  })
+})
+
+describe('enforceTypeTag', () => {
+  it('returns tags unchanged when a type tag is already present', () => {
+    const result = enforceTypeTag(['ai', 'web app'], 'https://example.com')
+    expect(result).toEqual(['ai', 'web app'])
+  })
+
+  it('returns tags unchanged when "web site" is present', () => {
+    const result = enforceTypeTag(['docs', 'web site'], 'https://docs.example.com')
+    expect(result).toEqual(['docs', 'web site'])
+  })
+
+  it('returns tags unchanged when "github" is present', () => {
+    const result = enforceTypeTag(['cli', 'github'], 'https://github.com/user/repo')
+    expect(result).toEqual(['cli', 'github'])
+  })
+
+  it('adds github type tag for github.com URL when none present', () => {
+    const result = enforceTypeTag(['cli'], 'https://github.com/user/repo')
+    expect(result).toEqual(['cli', 'github'])
+  })
+
+  it('adds github type tag for gitlab.com URL when none present', () => {
+    const result = enforceTypeTag(['devtools'], 'https://gitlab.com/org/repo')
+    expect(result).toEqual(['devtools', 'github'])
+  })
+
+  it('does not add a type tag for non-repo URLs when none present', () => {
+    const result = enforceTypeTag(['docs'], 'https://example.com')
+    expect(result).toEqual(['docs'])
   })
 })
 

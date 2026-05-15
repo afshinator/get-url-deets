@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { summarizeAndTag, evaluateStackFit, fetchPageText, resolveStackFit } from '../../lib/ai'
+import { summarizeAndTag, evaluateStackFit, fetchPageText, resolveStackFit, enforceTypeTag } from '../../lib/ai'
 import { saveEntry } from '../../lib/kv'
 import { normalizeUrl } from '../../lib/parser'
 import type { UrlEntry } from '../../lib/types'
@@ -36,12 +36,13 @@ app.post(async (c) => {
 
     const pageText = await fetchPageText(url)
 
-    const { summary, tags } = await summarizeAndTag(
+    const { summary, tags: aiTags } = await summarizeAndTag(
       c.env,
       pageText,
       category,
       availableTags
     )
+    const tags = enforceTypeTag(aiTags, url)
 
     const resolvedName = name || url
 
