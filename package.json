@@ -1,5 +1,5 @@
 {
-  "name": "get-deets",
+  "name": "get-url-deets",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",

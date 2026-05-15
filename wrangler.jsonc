@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "get-deets",
+	"name": "get-url-deets",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-05-14",
 	"assets": {
