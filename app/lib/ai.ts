@@ -84,9 +84,10 @@ export function parseStackFitResult(text: string): StackFitResult | null {
 }
 
 function diagnoseStackFitError(text: string): string {
-  if (!text) return `AI returned an empty response (length ${text.length}). Try again.`
+  if (text.startsWith('AI error:')) return text
+  if (!text) return 'AI returned an empty response. Try again.'
   const json = extractJson(text)
-  if (!json) return `AI returned a response without JSON (${text.length} chars). The model may have misunderstood the prompt. Try again.`
+  if (!json) return `AI returned a response without JSON (${text.length} chars). Try again.`
   return 'AI returned JSON that could not be parsed. Try again.'
 }
 
@@ -99,6 +100,10 @@ export function resolveStackFit(
     return { verdict: 'FAILED', explanation: diagnoseStackFitError(rawResponse) }
   }
   return { verdict: 'FAILED', explanation: 'Could not evaluate stack fit. Try again.' }
+}
+
+export function filterTagsToPool(tags: string[], pool: string[]): string[] {
+  return tags.filter(t => pool.includes(t))
 }
 
 export async function summarizeAndTag(
@@ -126,8 +131,14 @@ ${pageText.slice(0, 8000)}`
   })
 
   const raw = response as any
+  if (raw?.errors?.[0]?.message) {
+    console.warn('[summarizeAndTag] AI error:', raw.errors[0].message)
+    return { summary: `AI error: ${raw.errors[0].message}`, tags: [] }
+  }
   const text = typeof raw?.response === 'string' ? raw.response : ''
-  return parseAiResult(text)
+  const result = parseAiResult(text)
+  result.tags = filterTagsToPool(result.tags, availableTags)
+  return result
 }
 
 export async function evaluateStackFit(
@@ -150,7 +161,7 @@ ${pageText.slice(0, 4000)}
 """
 
 Respond in JSON:
-{"verdict": "COMPLEMENT" | "REPLACE" | "ENHANCE" | "NO_FIT", "explanation": "1 sentence explaining why"}`
+{"verdict": "COMPLEMENT", "REPLACE", "ENHANCE", or "NO_FIT", "explanation": "1 sentence explaining why"}`
 
   const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
     messages: [{ role: 'user', content: prompt }],
@@ -158,8 +169,12 @@ Respond in JSON:
   })
 
   const raw = response as any
+  if (raw?.errors?.[0]?.message) {
+    console.warn('[evaluateStackFit] AI error:', raw.errors[0].message)
+    return { result: null, rawResponse: `AI error: ${raw.errors[0].message}` }
+  }
   const text = typeof raw?.response === 'string' ? raw.response : ''
-  if (!text) console.warn('evaluateStackFit: AI returned empty response')
+  if (!text) console.warn('[evaluateStackFit] unexpected response shape:', JSON.stringify(raw).slice(0, 200))
   return { result: parseStackFitResult(text), rawResponse: text }
 }
 

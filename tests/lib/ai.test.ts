@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseAiResult, parseStackFitResult, extractJson, resolveStackFit } from '../../app/lib/ai'
+import { parseAiResult, parseStackFitResult, extractJson, resolveStackFit, filterTagsToPool } from '../../app/lib/ai'
 
 describe('extractJson', () => {
   it('extracts JSON from plain text', () => {
@@ -144,6 +144,31 @@ describe('parseStackFitResult', () => {
   })
 })
 
+describe('filterTagsToPool', () => {
+  it('keeps only tags present in the pool', () => {
+    const result = filterTagsToPool(['ai', 'testing', 'unknown'], ['ai', 'testing', 'cli'])
+    expect(result).toEqual(['ai', 'testing'])
+  })
+
+  it('returns empty when no tags match', () => {
+    const result = filterTagsToPool(['unknown'], ['ai', 'testing'])
+    expect(result).toEqual([])
+  })
+
+  it('returns empty when tags are empty', () => {
+    expect(filterTagsToPool([], ['ai'])).toEqual([])
+  })
+
+  it('returns empty when pool is empty', () => {
+    expect(filterTagsToPool(['ai'], [])).toEqual([])
+  })
+
+  it('keeps all tags when all match', () => {
+    const result = filterTagsToPool(['ai', 'testing'], ['ai', 'testing', 'cli'])
+    expect(result).toEqual(['ai', 'testing'])
+  })
+})
+
 describe('resolveStackFit', () => {
   it('returns the AI result when it succeeds', () => {
     const result = resolveStackFit({ verdict: 'COMPLEMENT', explanation: 'Fits well.' })
@@ -166,6 +191,12 @@ describe('resolveStackFit', () => {
     const result = resolveStackFit(null, '{"verdict": "ENHANCE", "explanation": "text with "unescaped" inner quotes"}')
     expect(result.verdict).toBe('FAILED')
     expect(result.explanation).toContain('could not be parsed')
+  })
+
+  it('surfaces AI API error from rawResponse', () => {
+    const result = resolveStackFit(null, 'AI error: Model overloaded')
+    expect(result.verdict).toBe('FAILED')
+    expect(result.explanation).toBe('AI error: Model overloaded')
   })
 
   it('falls back when no raw response provided', () => {

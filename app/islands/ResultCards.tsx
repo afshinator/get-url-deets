@@ -120,22 +120,6 @@ export default function ResultCards({ categories, initialData }: Props) {
     })
   }, [])
 
-  const addTag = useCallback((index: number) => {
-    const t = prompt('Add tag:')
-    if (!t?.trim()) return
-    const tag = t.trim()
-    setResults(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], tags: [...next[index].tags, tag] }
-      return next
-    })
-    fetch('/api/categories/add-tag', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, tag }),
-    }).catch(() => {})
-  }, [category])
-
   return (
     <div>
       {/* Category + Stack Fit row */}
@@ -234,7 +218,6 @@ export default function ResultCards({ categories, initialData }: Props) {
                     <span class="tag-remove" onClick={() => removeTag(i, tag)}>×</span>
                   </span>
                 ))}
-                <span class="tag-add" onClick={() => addTag(i)}>+</span>
               </div>
             </div>
           ))}
