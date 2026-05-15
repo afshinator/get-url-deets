@@ -1,5 +1,19 @@
 # Deets Implementation Plan
 
+> **Status: All tasks implemented (2026-05-15). Ready for deploy.**
+> 
+> - [x] Task 1: HonoX scaffold — 18 files placed
+> - [x] Task 2: CF bindings — AI + KV (`71911b92f8914856bca1a17be4110728` at `/project/get-url-deets/wrangler.jsonc:27`)
+> - [x] Task 3: CSS + Renderer + Types
+> - [x] Task 4: Parser — `app/lib/parser.ts`
+> - [x] Task 5: AI utility — `app/lib/ai.ts`
+> - [x] Task 6: Export — `app/lib/export.ts`
+> - [x] Task 7: API routes — `process.ts`, `categories.ts`, `stack.ts`
+> - [x] Task 8: Islands — `ThemeToggle`, `ResultCards`, `CategoriesManager`, `StackSettings`
+> - [x] Task 9: Pages — `index.tsx`, `categories.tsx`, `settings.tsx`
+> - [x] Task 10: Build verified — `tsc --noEmit` clean, `npm run build` passes
+> - [ ] Task 11: Commit (not done — user didn't ask)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a HonoX web app that parses pasted URLs, uses Workers AI to summarize/tag/stack-fit them, and exports formatted results for start.me.

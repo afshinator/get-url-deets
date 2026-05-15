@@ -2,15 +2,22 @@
   "name": "get-url-deets",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy --minify",
+    "dev": "vite",
+    "build": "vite build --mode client && vite build",
+    "deploy": "vite build --mode client && vite build && wrangler deploy --minify",
+    "test": "vitest run",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
-    "hono": "^4.12.18"
+    "hono": "^4.12.18",
+    "honox": "^0.1.0"
   },
   "devDependencies": {
+    "@hono/vite-build": "^1.11.1",
+    "@hono/vite-dev-server": "^0.25.3",
     "@types/node": "^25.8.0",
+    "vite": "^6.0.0",
+    "vitest": "^4.1.6",
     "wrangler": "^4.91.0"
   }
 }

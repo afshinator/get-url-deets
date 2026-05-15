@@ -5,18 +5,26 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "get-url-deets",
-	"main": "src/index.ts",
+	"main": "./dist/index.js",
 	"compatibility_date": "2026-05-14",
-	"assets": {
-		"binding": "ASSETS",
-		"directory": "./public"
-	},
 	"observability": {
 		"enabled": true
 	},
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
+	],
+	"assets": {
+		"directory": "./dist"
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "DEETS_KV",
+			"id": "71911b92f8914856bca1a17be4110728"
+		}
 	]
 	/**
 	 * Smart Placement
