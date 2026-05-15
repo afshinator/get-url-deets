@@ -204,6 +204,12 @@ describe('resolveStackFit', () => {
     expect(result.explanation).toBe('AI error: Model overloaded')
   })
 
+  it('surfaces unexpected AI response shape', () => {
+    const result = resolveStackFit(null, 'Unexpected AI response: {"text":"some value"}')
+    expect(result.verdict).toBe('FAILED')
+    expect(result.explanation).toBe('Unexpected AI response: {"text":"some value"}')
+  })
+
   it('falls back when no raw response provided', () => {
     const result = resolveStackFit(null)
     expect(result).toEqual({ verdict: 'FAILED', explanation: 'Could not evaluate stack fit. Try again.' })

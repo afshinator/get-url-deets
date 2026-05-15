@@ -85,6 +85,7 @@ export function parseStackFitResult(text: string): StackFitResult | null {
 
 function diagnoseStackFitError(text: string): string {
   if (text.startsWith('AI error:')) return text
+  if (text.startsWith('Unexpected AI response:')) return text
   if (!text) return 'AI returned an empty response. Try again.'
   const json = extractJson(text)
   if (!json) return `AI returned a response without JSON (${text.length} chars). Try again.`
@@ -138,6 +139,11 @@ ${pageText.slice(0, 8000)}`
     return { summary: `AI error: ${raw.errors[0].message}`, tags: [] }
   }
   const text = typeof raw?.response === 'string' ? raw.response : ''
+  if (!text) {
+    const shape = JSON.stringify(raw).slice(0, 300)
+    console.warn('[summarizeAndTag] unexpected response shape:', shape)
+    return { summary: `Unexpected AI response: ${shape || '(empty)'}`, tags: [] }
+  }
   const result = parseAiResult(text)
   result.tags = filterTagsToPool(result.tags, availableTags).slice(0, 3)
   return result
@@ -176,7 +182,11 @@ Respond in JSON:
     return { result: null, rawResponse: `AI error: ${raw.errors[0].message}` }
   }
   const text = typeof raw?.response === 'string' ? raw.response : ''
-  if (!text) console.warn('[evaluateStackFit] unexpected response shape:', JSON.stringify(raw).slice(0, 200))
+  if (!text) {
+    const shape = JSON.stringify(raw).slice(0, 300)
+    console.warn('[evaluateStackFit] unexpected response shape:', shape)
+    return { result: null, rawResponse: `Unexpected AI response: ${shape || '(empty)'}` }
+  }
   return { result: parseStackFitResult(text), rawResponse: text }
 }
 
