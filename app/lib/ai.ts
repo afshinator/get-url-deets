@@ -109,6 +109,59 @@ export function filterTagsToPool(tags: string[], pool: string[]): string[] {
   return tags.filter(t => pool.includes(t))
 }
 
+function getResponseString(raw: any): string | undefined {
+  if (raw?.response === undefined) return undefined
+  if (typeof raw.response === 'string') return raw.response
+  return undefined
+}
+
+export function parseRawStackFitResponse(raw: any): { result: StackFitResult | null; rawResponse: string } | null {
+  if (raw?.errors?.[0]?.message) {
+    return { result: null, rawResponse: `AI error: ${raw.errors[0].message}` }
+  }
+
+  // Workers AI may return .response as an object (structured output with tool_calls)
+  if (raw?.response && typeof raw.response !== 'string') {
+    const sr = raw.response as { verdict?: string; explanation?: string }
+    if (sr.verdict || sr.explanation) {
+      return { result: { verdict: (sr.verdict as StackFitResult['verdict']) ?? 'NO_FIT', explanation: sr.explanation ?? 'No explanation.' }, rawResponse: '' }
+    }
+  }
+
+  const text = getResponseString(raw)
+  if (text === undefined) {
+    const shape = JSON.stringify(raw).slice(0, 300)
+    return { result: null, rawResponse: shape ? `Unexpected AI response: ${shape}` : '' }
+  }
+
+  return { result: parseStackFitResult(text), rawResponse: text }
+}
+
+export function parseRawAiResponse(raw: any): AiResult & { error?: string } {
+  if (raw?.errors?.[0]?.message) {
+    return { summary: '', tags: [], error: `AI error: ${raw.errors[0].message}` }
+  }
+
+  // Workers AI may return .response as an object (structured output)
+  if (raw?.response && typeof raw.response !== 'string') {
+    const sr = raw.response as { summary?: string; tags?: string[] }
+    if (sr.summary || sr.tags) {
+      return {
+        summary: (sr.summary ?? 'No summary available.').trim(),
+        tags: Array.isArray(sr.tags) ? sr.tags.filter(t => t && typeof t === 'string') : [],
+      }
+    }
+  }
+
+  const text = getResponseString(raw)
+  if (text === undefined) {
+    const shape = JSON.stringify(raw).slice(0, 300)
+    return { summary: shape ? `Unexpected AI response: ${shape}` : 'No response from AI.', tags: [] }
+  }
+
+  return { ...parseAiResult(text) }
+}
+
 const TYPE_TAGS = ['github', 'web site', 'web app']
 
 export function enforceTypeTag(tags: string[], url: string): string[] {
@@ -145,18 +198,8 @@ ${pageText.slice(0, 8000)}`
     max_tokens: 1024,
   })
 
-  const raw = response as any
-  if (raw?.errors?.[0]?.message) {
-    console.warn('[summarizeAndTag] AI error:', raw.errors[0].message)
-    return { summary: `AI error: ${raw.errors[0].message}`, tags: [] }
-  }
-  const text = typeof raw?.response === 'string' ? raw.response : ''
-  if (!text) {
-    const shape = JSON.stringify(raw).slice(0, 300)
-    console.warn('[summarizeAndTag] unexpected response shape:', shape)
-    return { summary: `Unexpected AI response: ${shape || '(empty)'}`, tags: [] }
-  }
-  const result = parseAiResult(text)
+  const result = parseRawAiResponse(response)
+  if (result.error) return { summary: result.error, tags: [] }
   result.tags = filterTagsToPool(result.tags, availableTags).slice(0, 4)
   return result
 }
@@ -188,18 +231,9 @@ Respond in JSON:
     max_tokens: 512,
   })
 
-  const raw = response as any
-  if (raw?.errors?.[0]?.message) {
-    console.warn('[evaluateStackFit] AI error:', raw.errors[0].message)
-    return { result: null, rawResponse: `AI error: ${raw.errors[0].message}` }
-  }
-  const text = typeof raw?.response === 'string' ? raw.response : ''
-  if (!text) {
-    const shape = JSON.stringify(raw).slice(0, 300)
-    console.warn('[evaluateStackFit] unexpected response shape:', shape)
-    return { result: null, rawResponse: `Unexpected AI response: ${shape || '(empty)'}` }
-  }
-  return { result: parseStackFitResult(text), rawResponse: text }
+  const result = parseRawStackFitResponse(response)
+  if (!result) return { result: null, rawResponse: '' }
+  return result
 }
 
 export async function fetchPageText(url: string): Promise<string> {

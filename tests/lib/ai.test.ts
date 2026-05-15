@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseAiResult, parseStackFitResult, extractJson, resolveStackFit, filterTagsToPool, enforceTypeTag } from '../../app/lib/ai'
+import { parseAiResult, parseStackFitResult, extractJson, resolveStackFit, filterTagsToPool, enforceTypeTag, parseRawStackFitResponse, parseRawAiResponse } from '../../app/lib/ai'
 
 describe('extractJson', () => {
   it('extracts JSON from plain text', () => {
@@ -201,6 +201,75 @@ describe('enforceTypeTag', () => {
   it('does not add a type tag for non-repo URLs when none present', () => {
     const result = enforceTypeTag(['docs'], 'https://example.com')
     expect(result).toEqual(['docs'])
+  })
+})
+
+describe('parseRawStackFitResponse', () => {
+  it('handles .response as string with JSON', () => {
+    const raw = { response: '{"verdict":"ENHANCE","explanation":"Fits well."}' }
+    const result = parseRawStackFitResponse(raw)
+    expect(result).toBeDefined()
+    expect(result!.result).toEqual({ verdict: 'ENHANCE', explanation: 'Fits well.' })
+    expect(result!.rawResponse).toBe('{"verdict":"ENHANCE","explanation":"Fits well."}')
+  })
+
+  it('handles .response as object with verdict + explanation', () => {
+    const raw = { response: { verdict: 'ENHANCE', explanation: 'Fits well.' } }
+    const result = parseRawStackFitResponse(raw)
+    expect(result).toBeDefined()
+    expect(result!.result).toEqual({ verdict: 'ENHANCE', explanation: 'Fits well.' })
+    expect(result!.rawResponse).toBe('')
+  })
+
+  it('handles .response as object with missing verdict field', () => {
+    const raw = { response: { explanation: 'some reason' } }
+    const result = parseRawStackFitResponse(raw)
+    expect(result!.result).toEqual({ verdict: 'NO_FIT', explanation: 'some reason' })
+  })
+
+  it('handles Workers AI error envelope', () => {
+    const raw = { errors: [{ message: 'Model overloaded' }] }
+    const result = parseRawStackFitResponse(raw)
+    expect(result!.result).toBeNull()
+    expect(result!.rawResponse).toBe('AI error: Model overloaded')
+  })
+
+  it('handles empty string response', () => {
+    const raw = { response: '' }
+    const result = parseRawStackFitResponse(raw)
+    expect(result!.result).toBeNull()
+    expect(result!.rawResponse).toBe('')
+  })
+})
+
+describe('parseRawAiResponse', () => {
+  it('handles .response as string with JSON', () => {
+    const raw = { response: '{"summary":"A tool.","tags":["a","b"]}' }
+    const result = parseRawAiResponse(raw)
+    expect(result.summary).toBe('A tool.')
+    expect(result.tags).toEqual(['a', 'b'])
+    expect(result.error).toBeUndefined()
+  })
+
+  it('handles .response as object with summary + tags', () => {
+    const raw = { response: { summary: 'A tool.', tags: ['a', 'b'] } }
+    const result = parseRawAiResponse(raw)
+    expect(result.summary).toBe('A tool.')
+    expect(result.tags).toEqual(['a', 'b'])
+    expect(result.error).toBeUndefined()
+  })
+
+  it('handles Workers AI error envelope', () => {
+    const raw = { errors: [{ message: 'Model overloaded' }] }
+    const result = parseRawAiResponse(raw)
+    expect(result.error).toBe('AI error: Model overloaded')
+  })
+
+  it('handles empty string response', () => {
+    const raw = { response: '' }
+    const result = parseRawAiResponse(raw)
+    expect(result.summary).toBe('Could not generate summary.')
+    expect(result.tags).toEqual([])
   })
 })
 
