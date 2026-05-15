@@ -87,9 +87,4 @@ Wrap the inner loop body in `try/catch`. On failure, push an entry with `error: 
 
 Remove the inline `exportText()` and import `formatExport` instead. This eliminates the dead-code problem and ensures a single source of truth for export formatting.
 
-## Out of Scope
-
-- Card streaming (SSE) — requires architectural changes, separate design pass
-- Rate limiting / auth — post-v1
-- URL persistence / `by-category:*` / `createdAt` — post-v1
-- Cloudflare dev adapter restoration — needs `wrangler login`, separate workflow
+<!-- Out-of-scope items moved to docs/roadmap.md -->

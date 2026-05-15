@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'hono/jsx'
 import type { UrlEntry } from '../lib/types'
+import { parseUrls } from '../lib/parser'
 import { formatExport } from '../lib/export'
 
 interface Props {
@@ -11,31 +12,51 @@ export default function ResultCards({ categories }: Props) {
   const [category, setCategory] = useState(categories[0] ?? 'dev')
   const [checkStackFit, setCheckStackFit] = useState(false)
   const [results, setResults] = useState<UrlEntry[]>([])
-  const [processing, setProcessing] = useState(false)
+  const [pendingUrls, setPendingUrls] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
+
+  const allDone = pendingUrls.size === 0 && results.length > 0
 
   const handleProcess = useCallback(async () => {
     if (!text.trim()) return
-    setProcessing(true)
     setResults([])
     setError('')
 
-    try {
-      const resp = await fetch('/api/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, category, checkStackFit }),
-      })
-      const data = await resp.json() as { error?: string; results?: UrlEntry[] }
-      if (data.error) {
-        setError(data.error)
-        return
+    const parsed = parseUrls(text)
+    if (parsed.length === 0) {
+      setError('No URLs found in text.')
+      return
+    }
+
+    setPendingUrls(new Set(parsed.map(p => p.url)))
+
+    for (const { name, url } of parsed) {
+      try {
+        const resp = await fetch('/api/process-one', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, name, category, checkStackFit }),
+        })
+        const entry = await resp.json() as UrlEntry
+        setResults(prev => [...prev, entry])
+      } catch {
+        setResults(prev => [
+          ...prev,
+          {
+            name: name || url,
+            url,
+            summary: 'Failed to process URL. Check your connection and try again.',
+            category,
+            tags: [],
+          },
+        ])
+      } finally {
+        setPendingUrls(prev => {
+          const next = new Set(prev)
+          next.delete(url)
+          return next
+        })
       }
-      if (data.results) setResults(data.results)
-    } catch {
-      setError('Failed to process URLs. Check your connection and try again.')
-    } finally {
-      setProcessing(false)
     }
   }, [text, category, checkStackFit])
 
@@ -94,23 +115,11 @@ export default function ResultCards({ categories }: Props) {
           placeholder={`00:38 - onBeacon : https://onbeacon.ai\n01:14 - Bruin : https://getbruin.com`}
         />
         <div style="display: flex; justify-content: flex-end;" class="mt-8">
-          <button class="btn" onClick={handleProcess} disabled={processing || !text.trim()}>
-            {processing ? 'Processing...' : 'Process URLs'}
+          <button class="btn" onClick={handleProcess} disabled={pendingUrls.size > 0 || !text.trim()}>
+            {pendingUrls.size > 0 ? `Processing ${pendingUrls.size} remaining...` : 'Process URLs'}
           </button>
         </div>
       </div>
-
-      {/* Processing indicator */}
-      {processing && (
-        <div class="card processing-card">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="spinner">◌</span>
-            <span style="color: var(--text-muted); font-size: 14px;">
-              Processing URLs — fetching pages, generating summaries...
-            </span>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div class="card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.1);">
@@ -118,13 +127,20 @@ export default function ResultCards({ categories }: Props) {
         </div>
       )}
 
-      {/* Results */}
-      {results.length > 0 && (
+      {/* Results — each card appears as its URL finishes */}
+      {(results.length > 0 || pendingUrls.size > 0) && (
         <div>
-          <label class="label-text mb-8">Results ({results.length} URLs)</label>
+          <label class="label-text mb-8">
+            Results ({results.length} URL{results.length !== 1 ? 's' : ''})
+            {pendingUrls.size > 0 && (
+              <span style="color: var(--text-muted); font-size: 12px; margin-left: 8px;">
+                — {pendingUrls.size} processing...
+              </span>
+            )}
+          </label>
 
           {results.map((entry, i) => (
-            <div class="card card-animate" key={entry.url}>
+            <div class="card card-animate" key={entry.url + i}>
               <div>
                 <span style="font-weight: 600; font-size: 15px;">{entry.name}</span>
                 <a href={entry.url} class="url-link" target="_blank" rel="noopener">
@@ -157,18 +173,23 @@ export default function ResultCards({ categories }: Props) {
             </div>
           ))}
 
-          {/* Export */}
-          <div class="mt-16">
-            <details>
-              <summary style="cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted);">
-                Export for start.me
-              </summary>
-              <div class="export-preview mt-8">{formatExport(results)}</div>
-              <button class="btn mt-8" onClick={() => navigator.clipboard.writeText(formatExport(results))}>
-                Copy All
-              </button>
-            </details>
-          </div>
+          {/* Pending cards — show skeleton while processing */}
+          {pendingUrls.size > 0 && null}
+
+          {/* Export — only show when all done */}
+          {allDone && (
+            <div class="mt-16">
+              <details>
+                <summary style="cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted);">
+                  Export for start.me
+                </summary>
+                <div class="export-preview mt-8">{formatExport(results)}</div>
+                <button class="btn mt-8" onClick={() => navigator.clipboard.writeText(formatExport(results))}>
+                  Copy All
+                </button>
+              </details>
+            </div>
+          )}
         </div>
       )}
     </div>

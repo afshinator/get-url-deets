@@ -93,8 +93,7 @@ Category: "gardening"
 
 - **My Stack** — textarea where user pastes a description (several paragraphs) of their Docker container contents: installed tools, LLMs, repos, workflows. This text is fed to the AI as context when evaluating whether a new tool would fit.
 - **Light/dark mode toggle** — switch between themes
-- **Default category** — (post-v1) pre-select a category for new batches
-- **AI prompt customization** — (post-v1) edit the prompt template
+<!-- Settings post-v1 items moved to docs/roadmap.md -->
 
 ## AI Pipeline (Workers AI)
 
@@ -139,21 +138,7 @@ Manual: copy name → paste in start.me title, copy URL → paste in URL field, 
 
 **"Copy All" button**: Copies the entire export block to clipboard (all entries concatenated). User then manually copies each line block into start.me one at a time.
 
-## v1 vs Post-v1
-
-### v1 (this spec)
-- Manual paste → AI process (summary + tagging + optional stack fit) → manual copy into start.me
-- Settings page: stack description textarea, light/dark mode toggle
-- No persistence of processed URLs — each session is ephemeral. URLs are processed and shown, export is copied, page refresh clears state.
-- Focus: paste, process, review, export in one flow. No saved history, no category pages yet.
-- KV storage is wired and ready but only used for categories/tags config and stack description in v1.
-
-### Post-v1
-- Category pages (`/dev`, `/ai-law`, etc.) showing all saved URLs
-- Browser automation (Playwright/harness) to auto-enter into start.me
-- Eventually replace start.me entirely — Deets becomes the curated link hub
-- Settings page with AI prompt customization
-- Tag filtering, search, saved session history
+<!-- Post-v1 plans moved to docs/roadmap.md -->
 
 ## Design Decisions
 

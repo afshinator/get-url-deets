@@ -6,6 +6,7 @@ export interface ParsedUrl {
 const LINE_RE = /^\s*(?:\d+:)?\d+\s*-\s*(.+?)\s*:\s*(https?:\/\/\S+)/
 
 export function parseUrls(text: string): ParsedUrl[] {
+  if (typeof text !== 'string') return []
   const lines = text.split('\n')
   const results: ParsedUrl[] = []
 

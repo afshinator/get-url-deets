@@ -13,31 +13,7 @@
 | Browser extension | Chrome/Firefox/Edge "Bookmarker by start.me" | Reverse-engineer internal API (fragile) |
 | Import from URL | scrapes a page for links | Not useful for our case |
 
-## Automation Strategy (v2 post-v1)
-
-Two approaches to automate entry into start.me:
-
-### Option A: CSV Upload via Playwright/Browser-Harness (Recommended)
-
-1. Generate a CSV with columns: `title`, `URL`, `description`
-2. Use Playwright to:
-   - Log in to start.me (user provides credentials)
-   - Navigate to `https://start.me/users/user_data/import`
-   - Click "Import bookmarks" → choose "Upload a file"
-   - Upload the CSV file
-   - Let it process
-
-**Complexity**: Low-Medium (~50 lines of Playwright script)
-**Reliability**: High (CSV import is stable, documented)
-**Notes**: `description` and `title` fields are optional per their docs. `widget` and `group` fields exist but are optional.
-
-### Option B: Reverse-Engineer Extension API
-
-The Chrome extension must use an internal API. Could be discovered by inspecting the extension's network calls. Then POST directly.
-
-**Complexity**: Medium-High (undocumented API, could break)
-**Reliability**: Low (could change anytime, TOS concerns)
-**Not recommended** for v1.
+<!-- Automation strategy moved to docs/roadmap.md (Phase 3) -->
 
 ## Start.me Feature Summary (for eventual duplication)
 
@@ -83,8 +59,4 @@ The Chrome extension must use an internal API. Could be discovered by inspecting
 
 **Verdict**: Replicating the full start.me experience is a large project (months). However, replacing start.me *for your specific use case* (curated URL library organized by categories with tags and AI summaries) is much simpler and is essentially what Deets already is designed to be. The main missing piece in v1 is: (1) bookmark persistence with category pages, (2) browser extension for quick save, (3) drag-and-drop organization.
 
-## Recommendation
-
-- **v1**: Deets as designed — paste, AI process, export formatted output
-- **v2**: Add CSV file generation + Playwright automation to upload into start.me
-- **Long term**: Add persistence + category pages within Deets itself, then gradually add features to reduce dependency on start.me rather than duplicating it wholesale
+<!-- Phased recommendation moved to docs/roadmap.md -->

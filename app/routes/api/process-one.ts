@@ -1,0 +1,76 @@
+import { Hono } from 'hono'
+import { summarizeAndTag, evaluateStackFit, fetchPageText } from '../../lib/ai'
+import type { UrlEntry } from '../../lib/types'
+
+type Env = {
+  AI: Ai
+  DEETS_KV: KVNamespace
+}
+
+const app = new Hono<{ Bindings: Env }>()
+
+app.post(async (c) => {
+  const body = await c.req.json<{
+    url: string
+    name: string
+    category: string
+    checkStackFit?: boolean
+  }>()
+  const { url, name, category, checkStackFit } = body
+
+  if (typeof url !== 'string' || !url) {
+    return c.json({ error: 'URL is required' }, 400)
+  }
+
+  try {
+    const kv = c.env.DEETS_KV
+    const tagsJson = kv ? await kv.get(`tags:${category}`) : null
+    const availableTags: string[] = tagsJson ? JSON.parse(tagsJson) : []
+
+    const stackDescription = checkStackFit && kv
+      ? (await kv.get('stack-description')) ?? ''
+      : ''
+
+    const pageText = await fetchPageText(url)
+
+    const { summary, tags } = await summarizeAndTag(
+      c.env,
+      pageText,
+      category,
+      availableTags
+    )
+
+    const resolvedName = name || url
+
+    let stackFit: UrlEntry['stackFit']
+    if (checkStackFit) {
+      if (stackDescription) {
+        const sf = await evaluateStackFit(c.env, pageText, stackDescription)
+        stackFit = sf ? { verdict: sf.verdict, explanation: sf.explanation } : undefined
+      } else {
+        stackFit = { verdict: 'NO_FIT', explanation: 'No stack description saved — add one in Settings.' }
+      }
+    }
+
+    const entry: UrlEntry = {
+      name: resolvedName,
+      url,
+      summary,
+      category,
+      tags,
+      stackFit,
+    }
+
+    return c.json(entry)
+  } catch (err) {
+    return c.json({
+      name: name || url,
+      url,
+      summary: `Error processing: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      category,
+      tags: [],
+    } as UrlEntry)
+  }
+})
+
+export default app

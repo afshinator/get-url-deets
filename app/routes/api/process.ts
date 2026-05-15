@@ -47,9 +47,13 @@ app.post(async (c) => {
       const resolvedName = name || url
 
       let stackFit: UrlEntry['stackFit']
-      if (checkStackFit && stackDescription) {
-        const sf = await evaluateStackFit(c.env, pageText, stackDescription)
-        stackFit = sf ? { verdict: sf.verdict, explanation: sf.explanation } : undefined
+      if (checkStackFit) {
+        if (stackDescription) {
+          const sf = await evaluateStackFit(c.env, pageText, stackDescription)
+          stackFit = sf ? { verdict: sf.verdict, explanation: sf.explanation } : undefined
+        } else {
+          stackFit = { verdict: 'NO_FIT', explanation: 'No stack description saved — add one in Settings.' }
+        }
       }
 
       results.push({ name: resolvedName, url, summary, category, tags, stackFit })

@@ -13,6 +13,7 @@ interface StackFitResult {
 }
 
 export function parseAiResult(text: string): AiResult {
+  if (typeof text !== 'string') return { summary: 'No response from AI.', tags: [] }
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return { summary: 'Could not generate summary.', tags: [] }
 
@@ -30,6 +31,7 @@ export function parseAiResult(text: string): AiResult {
 }
 
 export function parseStackFitResult(text: string): StackFitResult | null {
+  if (typeof text !== 'string') return null
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return null
 
@@ -68,7 +70,8 @@ ${pageText.slice(0, 8000)}`
     max_tokens: 512,
   })
 
-  const text = (response as { response?: string }).response ?? ''
+  const raw = response as any
+  const text = typeof raw?.response === 'string' ? raw.response : ''
   return parseAiResult(text)
 }
 
@@ -99,7 +102,8 @@ Respond in JSON:
     max_tokens: 256,
   })
 
-  const text = (response as { response?: string }).response ?? ''
+  const raw = response as any
+  const text = typeof raw?.response === 'string' ? raw.response : ''
   return parseStackFitResult(text)
 }
 
