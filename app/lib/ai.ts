@@ -12,38 +12,93 @@ interface StackFitResult {
   explanation: string
 }
 
+export function extractJson(text: string): string | null {
+  const cleaned = text.replace(/```[a-z]*\n([\s\S]*?)```/g, '$1')
+
+  let start = -1
+  for (let i = 0; i < cleaned.length; i++) {
+    if (cleaned[i] === '{') { start = i; break }
+  }
+  if (start === -1) return null
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i]
+
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\') { escaped = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (inString) continue
+
+    if (ch === '{') depth++
+    if (ch === '}') {
+      depth--
+      if (depth === 0) return cleaned.slice(start, i + 1)
+    }
+  }
+
+  return null
+}
+
+function tryParseJson(raw: string): any | null {
+  try { return JSON.parse(raw) } catch { /* continue */ }
+
+  // Fix trailing commas before ] or }
+  const noTrailingCommas = raw.replace(/,(?=\s*[}\]])/g, '')
+  try { return JSON.parse(noTrailingCommas) } catch { /* continue */ }
+
+  return null
+}
+
 export function parseAiResult(text: string): AiResult {
   if (typeof text !== 'string') return { summary: 'No response from AI.', tags: [] }
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) return { summary: 'Could not generate summary.', tags: [] }
+  const json = extractJson(text)
+  if (!json) return { summary: 'Could not generate summary.', tags: [] }
 
-  try {
-    const parsed = JSON.parse(jsonMatch[0]) as { summary?: string; tags?: string[] }
-    return {
-      summary: parsed.summary?.trim() ?? 'No summary available.',
-      tags: Array.isArray(parsed.tags)
-        ? parsed.tags.filter(t => t && typeof t === 'string')
-        : [],
-    }
-  } catch {
-    return { summary: text.slice(0, 300), tags: [] }
+  const parsed = tryParseJson(json) as { summary?: string; tags?: string[] } | null
+  if (!parsed) return { summary: 'Could not parse AI response.', tags: [] }
+
+  return {
+    summary: parsed.summary?.trim() ?? 'No summary available.',
+    tags: Array.isArray(parsed.tags)
+      ? parsed.tags.filter(t => t && typeof t === 'string')
+      : [],
   }
 }
 
 export function parseStackFitResult(text: string): StackFitResult | null {
   if (typeof text !== 'string') return null
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) return null
+  const json = extractJson(text)
+  if (!json) return null
 
-  try {
-    const parsed = JSON.parse(jsonMatch[0]) as StackFitResult
-    return {
-      verdict: parsed.verdict ?? 'NO_FIT',
-      explanation: parsed.explanation ?? 'No explanation.',
-    }
-  } catch {
-    return null
+  const parsed = tryParseJson(json) as StackFitResult | null
+  if (!parsed) return null
+
+  return {
+    verdict: parsed.verdict ?? 'NO_FIT',
+    explanation: parsed.explanation ?? 'No explanation.',
   }
+}
+
+function diagnoseStackFitError(text: string): string {
+  if (!text) return 'AI returned an empty response. Try again.'
+  const json = extractJson(text)
+  if (!json) return 'AI returned a response without JSON. The model may have misunderstood the prompt. Try again.'
+  return 'AI returned JSON that could not be parsed. Try again.'
+}
+
+export function resolveStackFit(
+  sf: StackFitResult | null,
+  rawResponse?: string
+): NonNullable<Exclude<{ verdict: string; explanation: string }, undefined>> {
+  if (sf) return { verdict: sf.verdict, explanation: sf.explanation }
+  if (rawResponse !== undefined) {
+    return { verdict: 'NO_FIT', explanation: diagnoseStackFitError(rawResponse) }
+  }
+  return { verdict: 'NO_FIT', explanation: 'Could not evaluate stack fit. Try again.' }
 }
 
 export async function summarizeAndTag(
@@ -79,8 +134,8 @@ export async function evaluateStackFit(
   env: AiEnv,
   pageText: string,
   stackDescription: string
-): Promise<StackFitResult | null> {
-  if (!stackDescription.trim()) return null
+): Promise<{ result: StackFitResult | null; rawResponse: string }> {
+  if (!stackDescription.trim()) return { result: null, rawResponse: '' }
 
   const prompt = `You are evaluating whether a tool would fit into an existing development environment.
 
@@ -104,7 +159,7 @@ Respond in JSON:
 
   const raw = response as any
   const text = typeof raw?.response === 'string' ? raw.response : ''
-  return parseStackFitResult(text)
+  return { result: parseStackFitResult(text), rawResponse: text }
 }
 
 export async function fetchPageText(url: string): Promise<string> {

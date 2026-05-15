@@ -3,6 +3,14 @@ import type { UrlEntry } from '../lib/types'
 import { parseUrls } from '../lib/parser'
 import { formatExport } from '../lib/export'
 
+export function isRetryableFailure(entry: UrlEntry): boolean {
+  return (
+    !!entry.stackFit &&
+    entry.stackFit.verdict === 'NO_FIT' &&
+    !entry.stackFit.explanation.includes('No stack description saved')
+  )
+}
+
 interface Props {
   categories: string[]
 }
@@ -14,8 +22,10 @@ export default function ResultCards({ categories }: Props) {
   const [results, setResults] = useState<UrlEntry[]>([])
   const [pendingUrls, setPendingUrls] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
+  const [retrying, setRetrying] = useState(false)
 
   const allDone = pendingUrls.size === 0 && results.length > 0
+  const retryableCount = results.filter(isRetryableFailure).length
 
   const handleProcess = useCallback(async () => {
     if (!text.trim()) return
@@ -60,6 +70,36 @@ export default function ResultCards({ categories }: Props) {
     }
   }, [text, category, checkStackFit])
 
+  const handleRetryFailed = useCallback(async () => {
+    const failed = results.reduce<{ index: number; entry: UrlEntry }[]>((acc, entry, i) => {
+      if (isRetryableFailure(entry)) acc.push({ index: i, entry })
+      return acc
+    }, [])
+    if (failed.length === 0) return
+
+    setRetrying(true)
+
+    for (const { index, entry } of failed) {
+      try {
+        const resp = await fetch('/api/process-one', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: entry.url, name: entry.name, category: entry.category, checkStackFit: true }),
+        })
+        const updated = await resp.json() as UrlEntry
+        if (updated.stackFit) {
+          setResults(prev => {
+            const next = [...prev]
+            next[index] = { ...next[index], stackFit: updated.stackFit }
+            return next
+          })
+        }
+      } catch { /* keep existing fallback */ }
+    }
+
+    setRetrying(false)
+  }, [results])
+
   const removeTag = useCallback((index: number, tag: string) => {
     setResults(prev => {
       const next = [...prev]
@@ -71,12 +111,18 @@ export default function ResultCards({ categories }: Props) {
   const addTag = useCallback((index: number) => {
     const t = prompt('Add tag:')
     if (!t?.trim()) return
+    const tag = t.trim()
     setResults(prev => {
       const next = [...prev]
-      next[index] = { ...next[index], tags: [...next[index].tags, t.trim()] }
+      next[index] = { ...next[index], tags: [...next[index].tags, tag] }
       return next
     })
-  }, [])
+    fetch('/api/categories/add-tag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, tag }),
+    }).catch(() => {})
+  }, [category])
 
   return (
     <div>
@@ -114,10 +160,15 @@ export default function ResultCards({ categories }: Props) {
           onChange={(e: Event) => setText((e.target as HTMLTextAreaElement).value)}
           placeholder={`00:38 - onBeacon : https://onbeacon.ai\n01:14 - Bruin : https://getbruin.com`}
         />
-        <div style="display: flex; justify-content: flex-end;" class="mt-8">
+        <div style="display: flex; justify-content: flex-end; gap: 8px;" class="mt-8">
           <button class="btn" onClick={handleProcess} disabled={pendingUrls.size > 0 || !text.trim()}>
             {pendingUrls.size > 0 ? `Processing ${pendingUrls.size} remaining...` : 'Process URLs'}
           </button>
+          {allDone && retryableCount > 0 && (
+            <button class="btn btn-ghost" onClick={handleRetryFailed} disabled={retrying}>
+              {retrying ? `Retrying ${retryableCount} failed...` : `Retry ${retryableCount} failed evaluation${retryableCount !== 1 ? 's' : ''}`}
+            </button>
+          )}
         </div>
       </div>
 

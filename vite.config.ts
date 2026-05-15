@@ -6,13 +6,15 @@ import adapter from '@hono/vite-dev-server/cloudflare'
 export default defineConfig(({ mode }) => {
   if (mode === 'client') {
     return {
-      esbuild: { jsxImportSource: 'hono/jsx/dom' },
-      build: {
-        rollupOptions: {
-          input: ['/app/client.ts', '/app/style.css'],
-          output: { assetFileNames: 'static/[name]-[hash][extname]' },
-        },
-      },
+      plugins: [
+        honox({
+          client: {
+            input: ['/app/client.ts', '/app/style.css'],
+            assetsDir: 'static',
+            jsxImportSource: 'hono/jsx/dom',
+          },
+        }),
+      ],
     }
   }
 

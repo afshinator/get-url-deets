@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { parseUrls } from '../../lib/parser'
-import { summarizeAndTag, evaluateStackFit, fetchPageText } from '../../lib/ai'
+import { summarizeAndTag, evaluateStackFit, fetchPageText, resolveStackFit } from '../../lib/ai'
 import type { UrlEntry } from '../../lib/types'
 
 type Env = {
@@ -49,8 +49,8 @@ app.post(async (c) => {
       let stackFit: UrlEntry['stackFit']
       if (checkStackFit) {
         if (stackDescription) {
-          const sf = await evaluateStackFit(c.env, pageText, stackDescription)
-          stackFit = sf ? { verdict: sf.verdict, explanation: sf.explanation } : undefined
+          const { result: sf, rawResponse } = await evaluateStackFit(c.env, pageText, stackDescription)
+          stackFit = resolveStackFit(sf, rawResponse)
         } else {
           stackFit = { verdict: 'NO_FIT', explanation: 'No stack description saved — add one in Settings.' }
         }
